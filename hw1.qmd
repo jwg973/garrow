@@ -1,0 +1,172 @@
+title: "HW1 Wines of the PNW"
+author: "Jon Garrow"
+format: html
+---
+
+**Abstract:**
+
+This is a technical blog post of **both** an HTML file *and* [.qmd file](src/wine_of_pnw.qmd) hosted on GitHub pages.
+
+# Setup
+
+
+3.  In the space provided after the R chunk, explain what the code is doing (line by line) then delete this line.
+4.  Get your [GitHub Pages](https://docs.github.com/en/pages/quickstart) ready.
+
+**Set Up Code:**
+
+``` {r}
+library(tidyverse) 
+library(emmeans)
+
+wine <- readRDS(gzcon(url("https://github.com/cd-public/DSLM-505/raw/master/dat/wine.rds"))) %>%
+  filter(province=="Oregon" | province=="California" | province=="New York") %>% 
+  mutate(cherry=as.integer(str_detect(description,"[Cc]herry"))) %>% 
+  mutate(lprice=log(price)) %>% 
+  select(lprice, points, cherry, variety, province)
+
+print(wine, 10)
+summary(wine)
+```
+
+**Explanation:**
+
+> [TODO]{style="color:red;font-weight:bold"}: 
+
+wine <- readRDS(gzcon(url("https://github.com/cd-public/DSLM-505/raw/master/dat/wine.rds"))) %>% #load dataframe from github
+  filter(province=="Oregon" | province=="California" | province=="New York") %>% #filter to province variable equal to Oregon OR California OR New York
+  mutate(cherry=as.integer(str_detect(description,"[Cc]herry"))) %>% #add variable for y/n description includes "Cherry" OR "cherry"
+  mutate(lprice=log(price)) %>% #add variable for log of the price for all observations
+  select(lprice, points, cherry, province) #select only variables lprice, points, cherry, and province
+  
+# Multiple Regression
+
+## Linear Models
+
+First run a linear regression model with log of price as the dependent variable and 'points' and 'cherry' as features (variables).
+
+```{r}
+# TODO: hint: m1 <- lm(lprice ~ points + cherry)
+
+m1 <- lm(lprice ~ points + cherry, data=wine)
+
+```
+
+**Explanation:**
+
+> [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here*
+
+m1 <- lm(lprice ~ points + cherry) #fit linear model and assign to m1, where lprice is the response or dependent variable, points and cherry are the predictor variables, and the data is wine (defined above, limited to California, Oregon, and New York).
+
+> [TODO]{style="color:red;font-weight:bold"}: *report and explain the RMSE*
+
+get_regression_summaries(m1)
+RMSE is 0.469. This is a low value, which typically indicates a strong fit for the data, although it should be compared to other models.
+
+## Interaction Models
+
+Add an interaction between 'points' and 'cherry'.
+
+```{r}
+# TODO: hint: Check the slides.
+
+m2 <- lm(lprice ~ points * cherry, data=wine)
+```
+
+> [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here*
+
+m2 <- lm(lprice ~ points * cherry, data=wine) #Switch from + to * to add interaction between the predictor variables in the multiple regression model
+
+> [TODO]{style="color:red;font-weight:bold"}: *report and explain the RMSE*
+
+get_regression_summaries(m2) #RMSE for m2, with an interaction between points and cherry, also has an RMSE of 0.469. This suggests that the interaction is not a meaningful improvement over the simple model.
+
+### The Interaction Variable
+
+> [TODO]{style="color:red;font-weight:bold"}: *interpret the coefficient on the interaction variable.* <br>[Explain as you would to a non-technical manager.](https://youtube.com/clip/UgkxY7ohjoimIef6zpPLjgQHqJcJHeZptuVm?feature=shared)
+
+get_regression_table(m2)
+coef(m2)
+
+#All other elements being equal, an increase of 1.3% on the points*cherry axis will increase the price variable by 1. Ignore the fact that we've used the log of price, so these aren't dollars. The price will increase a lot with more points and cherries in the description.
+
+
+## Applications
+
+Determine which province (Oregon, California, or New York), does the 'cherry' feature in the data affect price most?
+
+```{r applications}
+# TODO: 
+
+m3 <- lm(lprice ~ points * cherry * province, data = wine)
+get_regression_table(m3)
+
+m4 <- lm(lprice ~ cherry * province, data = wine)
+get_regression_table(m4)
+
+emmeans(m4, ~ cherry | province)
+```
+
+> [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here, and explain your answer.*
+
+m4 <- lm(lprice ~ cherry * province, data = wine) #New model with just cherry and province as features
+get_regression_table(m4) #View summary results of the model
+
+emmeans(m4, ~ cherry | province) #With three levels for province, California was used as a reference variable. I used the emmeans package to find the effect of cherry across all of the values of province.
+
+#Oregon has the highest estimated marginal mean (3.708) for this model, with California a close second (3.668).
+
+# Scenarios
+
+## On Accuracy
+
+Imagine a model to distinguish New York wines from those in California and Oregon. After a few days of work, you take some measurements and note: "I've achieved 91% accuracy on my model!"
+
+Should you be impressed? Why or why not?
+
+```{r}
+# TODO: Use simple descriptive statistics from the data to justify your answer.
+
+boxplot(points ~ province, data = wine,
+        main = "Distribution of Points by State",
+        las = 2,     
+        xlab = NA,
+        ylab = NA,
+        col = "lightblue", 
+        outline = TRUE) 
+
+wine$variety_grouped <- fct_lump(wine$variety, n = 10)
+
+ggplot(wine, aes(x = variety_grouped)) +
+  geom_bar() +
+  labs(title = "Distribution of Varietals by State",
+       x = element_blank(),
+       y = "Count") +
+  facet_wrap(~ province, scales = "free_y") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+> [TODO]{style="color:red;font-weight:bold"}: *describe your reasoning here*
+
+91% is well below the standard of data science for academia and industry. Looking at the distribution of review points for these three states, New York averages are much lower and should be more precisely modeled. New York also produces different amounts of varietals, especially Riesling from the Finger Lakes.
+
+## On Ethics
+
+Why is understanding this vignette important to use machine learning in an ethical manner?
+
+Different scenarios and different stages in the data science process have different thresholds for accuracy, precision, and significance. Major decisions can be based on a model such as this, and they can have outsize negative influence on certain groups.
+
+This vignette shows that what might be fine for a class grade or beginning of exploratory analysis is not sufficient for prediction with a large dataset in a business context. With robust data that is clearly differentiated, accuracy 9.1 times out of 10 is not impressive or appropriate.
+
+> [TODO]{style="color:red;font-weight:bold"}: *describe your reasoning here*
+
+## Ignorance is no excuse
+
+Imagine you are working on a model to predict the likelihood that an individual loses their job as the result of the changing federal policy under new presidential administrations. You have a very large dataset with many hundreds of features, but you are worried that including indicators like age, income or gender might pose some ethical problems. When you discuss these concerns with your boss, she tells you to simply drop those features from the model. Does this solve the ethical issue? Why or why not?
+
+> [TODO]{style="color:red;font-weight:bold"}: *describe your reasoning here*
+
+In this case it would be more ethical to include those indicators, and if found relevant, disaggregate the data to ensure that smaller groups that might experience high levels of job loss are not lost within the whole.
