@@ -33,11 +33,13 @@ summary(wine)
 
 > [TODO]{style="color:red;font-weight:bold"}: 
 
+```{r}
 wine <- readRDS(gzcon(url("https://github.com/cd-public/DSLM-505/raw/master/dat/wine.rds"))) %>% #load dataframe from github
   filter(province=="Oregon" | province=="California" | province=="New York") %>% #filter to province variable equal to Oregon OR California OR New York
   mutate(cherry=as.integer(str_detect(description,"[Cc]herry"))) %>% #add variable for y/n description includes "Cherry" OR "cherry"
   mutate(lprice=log(price)) %>% #add variable for log of the price for all observations
   select(lprice, points, cherry, province) #select only variables lprice, points, cherry, and province
+```
   
 # Multiple Regression
 
@@ -56,12 +58,17 @@ m1 <- lm(lprice ~ points + cherry, data=wine)
 
 > [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here*
 
+```{r}
 m1 <- lm(lprice ~ points + cherry) #fit linear model and assign to m1, where lprice is the response or dependent variable, points and cherry are the predictor variables, and the data is wine (defined above, limited to California, Oregon, and New York).
+```
 
 > [TODO]{style="color:red;font-weight:bold"}: *report and explain the RMSE*
 
+```{r}
 get_regression_summaries(m1)
+```
 RMSE is 0.469. This is a low value, which typically indicates a strong fit for the data, although it should be compared to other models.
+
 
 ## Interaction Models
 
@@ -75,20 +82,26 @@ m2 <- lm(lprice ~ points * cherry, data=wine)
 
 > [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here*
 
+```{r}
 m2 <- lm(lprice ~ points * cherry, data=wine) #Switch from + to * to add interaction between the predictor variables in the multiple regression model
+```
 
 > [TODO]{style="color:red;font-weight:bold"}: *report and explain the RMSE*
 
+```{r}
 get_regression_summaries(m2) #RMSE for m2, with an interaction between points and cherry, also has an RMSE of 0.469. This suggests that the interaction is not a meaningful improvement over the simple model.
+```
 
 ### The Interaction Variable
 
 > [TODO]{style="color:red;font-weight:bold"}: *interpret the coefficient on the interaction variable.* <br>[Explain as you would to a non-technical manager.](https://youtube.com/clip/UgkxY7ohjoimIef6zpPLjgQHqJcJHeZptuVm?feature=shared)
 
+```{r}
 get_regression_table(m2)
 coef(m2)
+```
 
-#All other elements being equal, an increase of 1.3% on the points*cherry axis will increase the price variable by 1. Ignore the fact that we've used the log of price, so these aren't dollars. The price will increase a lot with more points and cherries in the description.
+All other elements being equal, an increase of 1.3% on the points*cherry axis will increase the price variable by 1. Ignore the fact that we've used the log of price, so these aren't dollars. The price will increase a lot with more points and cherries in the description.
 
 
 ## Applications
@@ -109,12 +122,14 @@ emmeans(m4, ~ cherry | province)
 
 > [TODO]{style="color:red;font-weight:bold"}: *write your line-by-line explanation of the code here, and explain your answer.*
 
+```{r}
 m4 <- lm(lprice ~ cherry * province, data = wine) #New model with just cherry and province as features
 get_regression_table(m4) #View summary results of the model
 
 emmeans(m4, ~ cherry | province) #With three levels for province, California was used as a reference variable. I used the emmeans package to find the effect of cherry across all of the values of province.
 
 #Oregon has the highest estimated marginal mean (3.708) for this model, with California a close second (3.668).
+```
 
 # Scenarios
 
@@ -145,7 +160,6 @@ ggplot(wine, aes(x = variety_grouped)) +
   facet_wrap(~ province, scales = "free_y") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
 
 ```
 
